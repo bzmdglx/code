@@ -9,7 +9,7 @@ jobs:
     #   uses: mxschmitt/action-tmate@v3
     - name: Debug
       run: |
-        sudo -i
+        # sudo -i
         red='\033[0;31m'
         green='\033[0;32m'
         yellow='\033[0;33m'
