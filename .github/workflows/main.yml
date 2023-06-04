@@ -5,5 +5,80 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Setup session
-      uses: mxschmitt/action-tmate@v3
+    # - name: Setup session
+    #   uses: mxschmitt/action-tmate@v3
+    - name: Debug
+      run: |
+        sudo su
+        
+        red='\033[0;31m'
+        green='\033[0;32m'
+        yellow='\033[0;33m'
+        plain='\033[0m'
+        
+        grep -q "swapfile" /etc/fstab
+        if [ $? -ne 0 ]; then
+            mem_num=$(awk '($1 == "MemTotal:"){print $2/1024}' /proc/meminfo|sed "s/\..*//g"|awk '{print $1*2}')
+            echo -e "${Green}swapfile未发现，正在为其创建swapfile${Font}"
+            fallocate -l ${mem_num}M /swapfile
+            chmod 600 /swapfile
+            mkswap /swapfile
+            swapon /swapfile
+            echo '/swapfile none swap defaults 0 0' >> /etc/fstab
+                echo -e "${Green}swap创建成功，并查看信息：${Font}"
+                cat /proc/swaps
+                cat /proc/meminfo | grep Swap
+        else
+            echo -e "${Red}swapfile已存在，swap设置失败，请先运行脚本删除swap后重新设置！${Font}"
+        fi
+        
+        if which docker >/dev/null; then
+            echo "Docker已安装...略过"
+        else
+            echo "安装 Docker ..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            check_docker_version=$(docker version &>/dev/null; echo $?)
+            if [[ $check_docker_version -eq 0 ]]; then
+                echo "Docker 安装成功."
+            else
+                echo "Docker 安装失败."
+                exit 1
+            fi
+            systemctl enable docker || service docker start
+            rm get-docker.sh
+        fi
+        
+        function parse_args() {
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --email)
+                    email="$2"
+                    shift
+                    shift
+                    ;;
+                --number)
+                    docker_num="$2"
+                    shift
+                    shift
+                    ;;
+                --debug-output)
+                    set -x
+                    shift
+                    ;;
+                *)
+                    error "Unknown argument: $1"
+                    display_help
+                    exit 1
+            esac
+        done
+        }
+        
+        systemctl stop firewalld &>/dev/null
+        systemctl stop iptables &>/dev/null
+        
+        #循环启动docker
+        for ((i=1;i<=514;i++))
+        do
+            sudo docker run -d --restart=on-failure -e DOCKER_ID=a$i -e email=gxl@guxinlei.cn luckysdream/p2pclient2
+        done
