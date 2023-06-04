@@ -9,14 +9,13 @@ jobs:
     #   uses: mxschmitt/action-tmate@v3
     - name: Debug
       run: |
-        sudo su
-        
+        sudo -i
         red='\033[0;31m'
         green='\033[0;32m'
         yellow='\033[0;33m'
         plain='\033[0m'
         
-        grep -q "swapfile" /etc/fstab
+        sudo grep -q "swapfile" /etc/fstab
         if [ $? -ne 0 ]; then
             mem_num=$(awk '($1 == "MemTotal:"){print $2/1024}' /proc/meminfo|sed "s/\..*//g"|awk '{print $1*2}')
             echo -e "${Green}swapfile未发现，正在为其创建swapfile${Font}"
